@@ -2,22 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Immersive 3D Bar Chart – A-Frame</title>
+  <title>Immersive 3D Bar Chart – A-Frame + D3</title>
 
-  <!-- ✅ A-FRAME SCRIPT (FIXED) -->
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.0.3/aframe.min.js"></script>
+
+  <!-- D3.js -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
 
   <style>
     body {
       margin: 0;
       background: #0b1020;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    }
-
-    .label {
-      color: white;
-      font-size: 28px;
-      text-align: center;
     }
   </style>
 </head>
@@ -26,26 +23,15 @@
 
 <a-scene background="color: #0b1020">
 
-  <!-- Camera + controls -->
-  <a-entity
-    position="0 6 14"
-    camera
-    look-controls
-    wasd-controls>
-  </a-entity>
+  <!-- Camera -->
+  <a-entity position="0 6 14" camera look-controls wasd-controls></a-entity>
 
   <!-- Lights -->
   <a-entity light="type: ambient; intensity: 0.4"></a-entity>
   <a-entity light="type: directional; intensity: 0.8" position="5 10 5"></a-entity>
 
   <!-- Floor -->
-  <a-plane
-    rotation="-90 0 0"
-    width="20"
-    height="20"
-    color="#11162a"
-    shadow>
-  </a-plane>
+  <a-plane rotation="-90 0 0" width="20" height="20" color="#11162a"></a-plane>
 
   <!-- Bars container -->
   <a-entity id="bars"></a-entity>
@@ -62,54 +48,54 @@
   ];
 
   const colors = ["#7c8cff", "#ff7ad9", "#46d3ff", "#ffa34a", "#9dff6a"];
-  const bars = document.querySelector("#bars");
 
-  data.forEach((d, i) => {
-    const height = d.value;
+  // Select container using D3
+  const scene = d3.select("#bars");
 
-    // Bar
-    const bar = document.createElement("a-box");
-    bar.setAttribute("width", 1);
-    bar.setAttribute("depth", 1);
-    bar.setAttribute("height", height);
-    bar.setAttribute("color", colors[i % colors.length]);
-
-    // Position (height/2 so it grows from floor)
-    bar.setAttribute("position", {
-      x: i * 2 - 4,
-      y: height / 2,
-      z: 0
-    });
-
-    // Animation
-    bar.setAttribute("animation", {
+  // Bind data
+  const bars = scene.selectAll("a-box")
+    .data(data)
+    .enter()
+    .append("a-box")
+    .attr("width", 1)
+    .attr("depth", 1)
+    .attr("height", d => d.value)
+    .attr("color", (d, i) => colors[i % colors.length])
+    .attr("position", (d, i) => {
+      const x = i * 2 - 4;
+      const y = d.value / 2;
+      return `${x} ${y} 0`;
+    })
+    .attr("animation", d => ({
       property: "scale",
       from: "1 0.01 1",
       to: "1 1 1",
       dur: 800,
       easing: "easeOutElastic"
+    }));
+
+  // Hover interaction
+  bars
+    .on("mouseenter", function(event, d) {
+      this.setAttribute("color", "#ffffff");
+    })
+    .on("mouseleave", function(event, d, i) {
+      const index = data.indexOf(d);
+      this.setAttribute("color", colors[index % colors.length]);
     });
 
-    // Hover interaction
-    bar.addEventListener("mouseenter", () => {
-      bar.setAttribute("color", "#ffffff");
-    });
-
-    bar.addEventListener("mouseleave", () => {
-      bar.setAttribute("color", colors[i % colors.length]);
-    });
-
-    // Label
+  // Labels (nested elements)
+  bars.each(function(d) {
     const label = document.createElement("a-text");
     label.setAttribute("value", `${d.label}: ${d.value}`);
     label.setAttribute("align", "center");
-    label.setAttribute("position", `0 ${height + 0.6} 0`);
+    label.setAttribute("position", `0 ${d.value + 0.6} 0`);
     label.setAttribute("color", "#ffffff");
     label.setAttribute("scale", "1.2 1.2 1.2");
 
-    bar.appendChild(label);
-    bars.appendChild(bar);
+    this.appendChild(label);
   });
+
 </script>
 
 </body>
